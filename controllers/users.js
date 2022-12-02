@@ -2,14 +2,14 @@ const jwt = require('jsonwebtoken');
 const {registerMail, sendResetpasswordMail} = require('../utils/utils')
 const nodemailer = require('nodemailer');
 const {hashPassword,hashCompare,createToken, jwtDecode} = require('../middleware/middleware');
-const userSchema = require('../models/user')
+const user = require('../Models/user')
 const {cloudinary} = require('../utils/cloudinary')
 const randomString = require('randomstring');
 
 
 const Register =async (req,res)=>{
     try {
-        let user = await userSchema.findOne({email:req.body.email})
+        let user = await user.findOne({email:req.body.email})
         if(user){
           res.send({ statusCode:409, message:"User Already Exists" })
         }
@@ -25,7 +25,7 @@ const Register =async (req,res)=>{
           }
           const vtoken = await randomString.generate();
           await userSchema.create(object);
-          const data = await  userSchema.updateOne({email:object.email},{$set:{verificationToken:vtoken}});
+          const data = await  user.updateOne({email:object.email},{$set:{verificationToken:vtoken}});
           if(data){
               registerMail(req.body.name,req.body.email,vtoken)
               res.send({statusCode:200,message:"Success"})
@@ -41,7 +41,7 @@ const Register =async (req,res)=>{
 
 const login = async (req,res)=>{
     try {
-      let user = await userSchema.findOne({email:req.body.email})
+      let user = await user.findOne({email:req.body.email})
       if(user.email !== null){
       if(user.isVerified !== true) return res.send({statusCode:400, message : "Please Verify Your Account"})
         let compare = await hashCompare(req.body.password,user.password)
@@ -62,11 +62,11 @@ const login = async (req,res)=>{
     try {
       const {confirmationToken} = req.params
       console.log(confirmationToken)
-      const user = await userSchema.findOne({verificationToken:confirmationToken})
+      const user = await user.findOne({verificationToken:confirmationToken})
       if(!user) return res.send({ statusCode:400,  message:"User Already Verified" })
       else{
-        const updateUser = await userSchema.updateOne({verificationToken:confirmationToken},{$set:{isVerified:true}},{$unset:{verificationToken:1}})
-        const updateUsers = await userSchema.updateOne({verificationToken:confirmationToken},{$unset:{verificationToken:1}})
+        const updateUser = await user.updateOne({verificationToken:confirmationToken},{$set:{isVerified:true}},{$unset:{verificationToken:1}})
+        const updateUsers = await user.updateOne({verificationToken:confirmationToken},{$unset:{verificationToken:1}})
         res.send({ statusCode:200, message:"Success", data:updateUsers})
       }
     } catch (error) {
@@ -83,10 +83,10 @@ const login = async (req,res)=>{
   const forgotPassword = async (req,res)=>{
     try {
       console.log(req.body.email)
-     const userData =  await userSchema.findOne({email:req.body.email})
+     const userData =  await user.findOne({email:req.body.email})
      if(userData){
         const token = jwt.sign({email:req.body.email},'jsonsecret',{expiresIn:'15m'})
-        const data = await  userSchema.updateOne({email:req.body.email},{$set:{forgotPasswordToken:token}});
+        const data = await  user.updateOne({email:req.body.email},{$set:{forgotPasswordToken:token}});
         sendResetpasswordMail(userData.name,userData.email,token)
           res.send({
          statusCode:200,
@@ -112,7 +112,7 @@ const login = async (req,res)=>{
 
 const resetPassword =async (req,res)=>{
   try {
-    const tokenData = await  userSchema.findOne({forgotPasswordToken:req.params.token})
+    const tokenData = await  user.findOne({forgotPasswordToken:req.params.token})
     // console.log(req.params.token)
     if(tokenData){
       const decodeJWt = await jwtDecode(tokenData.forgotPasswordToken);
@@ -164,7 +164,7 @@ try {
   const password = req.body.password
   const newPassword = await hashPassword(password)
   console.log(decoded)
-  const user = await userSchema.findOneAndUpdate({email:decoded.email},{$set:{password:newPassword,forgotPasswordToken:""}},{new:true})
+  const user = await user.findOneAndUpdate({email:decoded.email},{$set:{password:newPassword,forgotPasswordToken:""}},{new:true})
   console.log(user)
   res.send({
       statusbar:200,
@@ -186,7 +186,7 @@ const getProfile = async (req, res)  =>{
   try {
     const token = req.header('jwt-token');
     const decoded = await jwtDecode(token)
-    const user = await userSchema.findOne({_id:decoded.id})
+    const user = await user.findOne({_id:decoded.id})
     res.send({ statusbar:200, success:true, message:"Profile Fetched Successfully", data:user })
   }
     catch (error) {

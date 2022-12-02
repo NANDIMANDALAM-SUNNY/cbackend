@@ -25,7 +25,7 @@ router.get('/',async function(req, res) {
 
 router.post('/ordertimeline',async function(req, res) {
     try {
-        console.log(req.body)
+   
         const ordertimeline =await ordertimelineSchema.create(req.body);
         res.send({
             ordertimeline,
